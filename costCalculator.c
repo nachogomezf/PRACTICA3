@@ -23,7 +23,7 @@
  * @return
  */
 int main (int argc, const char * argv[] ) {
-
+    //hola pato
     int total = 0;
     printf("Total: %i €.\n", total);
 
