@@ -15,7 +15,6 @@
 
 //Mutex and cond variables
 pthread_mutex_t circ_buf_mutex;
-pthread_mutex_t elems_mutex;
 
 pthread_cond_t circ_buf_not_full;
 pthread_cond_t circ_buf_not_empty;
@@ -24,16 +23,12 @@ pthread_cond_t circ_buf_not_empty;
 struct element *elems;
 int total = 0;
 queue *circ_buf;
-int num_enq = 0;
 int num_operations;
 
 //Our definitions
 typedef struct produc_args{
-    int first_elem, last_elem, prod_num;
+    int first_elem, last_elem; //Store first and last elements to read
 }produc_args;
-/*typedef struct consum_args{
-    int num_operations;
-}consum_args;*/
 
 /**
  * Entry point
@@ -46,15 +41,13 @@ void * _producer(void * arg){
     produc_args *prod_arg = (produc_args*) arg;
     struct element enq_elem;
     for(int i = prod_arg->first_elem; i <= prod_arg->last_elem; i++){
-        pthread_mutex_lock(&elems_mutex);
-        enq_elem = elems[i];
-        pthread_mutex_unlock(&elems_mutex);
-        pthread_mutex_lock(&circ_buf_mutex); 
-        while(queue_full(circ_buf))
+        enq_elem = elems[i]; //Never accessing the same element so no need of mutex. 
+        pthread_mutex_lock(&circ_buf_mutex); //Lock mutex to write into circular buffer
+        while(queue_full(circ_buf)) //Wait for buffer to have space
             pthread_cond_wait(&circ_buf_not_full, &circ_buf_mutex);
-        queue_put(circ_buf, &enq_elem);
-        pthread_cond_signal(&circ_buf_not_empty);
-        pthread_mutex_unlock(&circ_buf_mutex);
+        queue_put(circ_buf, &enq_elem); //Write into buffer
+        pthread_cond_signal(&circ_buf_not_empty); //Signal not empty
+        pthread_mutex_unlock(&circ_buf_mutex); //Unlock mutex
     }
     pthread_exit(NULL);
     return NULL;
@@ -63,32 +56,33 @@ void * _producer(void * arg){
 void *_consumer(void *arg){
     struct element* elem;
     int cost, num_deq = 0;
-    while(num_deq != num_operations){
-        pthread_mutex_lock(&circ_buf_mutex);
-        while(queue_empty(circ_buf))
+    while(num_deq < num_operations){
+        pthread_mutex_lock(&circ_buf_mutex); //Lock mutex to read from circular buffer
+        while(queue_empty(circ_buf)) //Wait for buffer to be nonempty
             pthread_cond_wait(&circ_buf_not_empty, &circ_buf_mutex);
-        elem = queue_get(circ_buf);
-        if (elem->type == 1){
+        elem = queue_get(circ_buf); //Read from buffer
+        if (elem->type == 1){ //Check type to sum
             cost = 1;
         }else if (elem->type == 2){
             cost = 3;
         }else if (elem->type == 3){
             cost = 10;
         }
-        total += cost * elem->time;
-        pthread_cond_signal(&circ_buf_not_full);
-        pthread_mutex_unlock(&circ_buf_mutex);
+        total += cost * elem->time; //Perform operation
+        pthread_cond_signal(&circ_buf_not_full); //Signal buffer is now not full
+        pthread_mutex_unlock(&circ_buf_mutex); //Unlock mutex
         num_deq++;
     }
     pthread_exit(NULL);
     return NULL;
-}/*HAY QUE MODIFICAR*/
+}
 
 int main (int argc, const char * argv[]) {
     int size_buf, num_prod, num_op_prod;
     struct stat statbuf;
     pthread_t *th_prod;
     pthread_t th_cons;
+    produc_args *prod_arg;
 
     if (argc != 4){ //Check correct number of inputs
         printf("Error. Structure of the command is: ./calculator <file_name> <num_producers> <buff_size>\n");
@@ -106,28 +100,28 @@ int main (int argc, const char * argv[]) {
     num_prod = atoi(argv[2]);
     size_buf = atoi(argv[3]);
 
-    if (num_prod <= 0){
-        printf("Number of producers must be greater than 0\n");
+    if (num_prod <= 0){ //Check if valid number of producers
+        fprintf(stderr, "Number of producers must be greater than 0\n");
         return -1;
     }
-    if (size_buf <= 0){
-        printf("Size of the buffer must be greater than 0\n");
+    if (size_buf <= 0){ //Check if valid size of buffer
+        fprintf(stderr, "Size of the buffer must be greater than 0\n");
         return -1;
     }
 
     circ_buf = queue_init(size_buf); //Initialize buffer
 
-    //Create array of producer threads
+    //Allocate array of producer threads
     th_prod = (pthread_t*) malloc(num_prod * sizeof(pthread_t));
     if (th_prod == NULL){ 
-        perror("Error allocating producer threads");
+        perror("Error allocating producer threads.");
         queue_destroy(circ_buf);
         return -1;
     }
 
     close(STDIN_FILENO); //Redirect stdin to use scanf
     if (open(argv[1], O_RDONLY) < 0){
-        perror("Error opening the file");
+        perror("Error opening the file.");
         queue_destroy(circ_buf);
         free(th_prod);
         return -1;
@@ -135,10 +129,10 @@ int main (int argc, const char * argv[]) {
 
     scanf("%d", &num_operations); //Read number of operations
 
-    //Create structure for elems
+    //Allocate array for elems
     elems = (struct element*) malloc(num_operations * sizeof(struct element));
     if (elems == NULL){ 
-        perror("Error allocating elems");
+        perror("Error allocating elems.");
         close(STDIN_FILENO);
         queue_destroy(circ_buf);
         free(th_prod);
@@ -153,7 +147,8 @@ int main (int argc, const char * argv[]) {
         }
         i++;
     }
-    if (i < num_operations){
+
+    if (i < num_operations){ //Check if valid number of read lines
         fprintf(stderr, "NOT ENOUGH LINES READ\n");
         close(STDIN_FILENO);
         free(th_prod);
@@ -162,8 +157,7 @@ int main (int argc, const char * argv[]) {
         return -1;
     }
 
-    //Arguments for threads
-    produc_args *prod_arg;
+    //Allocate arguments for threads
     prod_arg = (produc_args*)malloc(num_prod * sizeof(produc_args));
     if (prod_arg == NULL){ 
         perror("Error allocating elems");
@@ -178,22 +172,20 @@ int main (int argc, const char * argv[]) {
 
     //Initialize mutex and condition variable
     pthread_mutex_init(&circ_buf_mutex, NULL);
-    pthread_mutex_init(&elems_mutex, NULL);
     pthread_cond_init(&circ_buf_not_full, NULL);
     pthread_cond_init(&circ_buf_not_empty, NULL);
 
     //Create threads
     for (int i = 0; i < num_prod; i++){
-        prod_arg[i].prod_num = i+1;
-        prod_arg[i].first_elem = i*num_op_prod;
+        prod_arg[i].first_elem = i*num_op_prod; //Set arguments for threads
         if (i != num_prod - 1){
             prod_arg[i].last_elem = (i+1)*num_op_prod - 1;
         } else {
             prod_arg[i].last_elem = num_operations - 1;
         }
-        pthread_create(&th_prod[i], NULL, _producer, &prod_arg[i]); //CHECK INPUTS
+        pthread_create(&th_prod[i], NULL, _producer, &prod_arg[i]); //Create producer thread with argument
     }
-    pthread_create(&th_cons, NULL, _consumer, NULL);
+    pthread_create(&th_cons, NULL, _consumer, NULL); //Create producer thread
 
     //Join threads
     for (int i = 0; i < num_prod; i++){
@@ -203,6 +195,7 @@ int main (int argc, const char * argv[]) {
 
     printf("Total: %i €.\n", total);
 
+    //Free memory
     free(th_prod);
     queue_destroy(circ_buf);
     free(elems);
@@ -210,7 +203,6 @@ int main (int argc, const char * argv[]) {
     pthread_cond_destroy(&circ_buf_not_full);
     pthread_cond_destroy(&circ_buf_not_empty);
     pthread_mutex_destroy(&circ_buf_mutex);
-    pthread_mutex_destroy(&elems_mutex);
     close(STDIN_FILENO);
     return 0;
 }
