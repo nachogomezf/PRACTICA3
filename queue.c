@@ -37,7 +37,7 @@ int queue_put(queue *q, struct element* x) {
 struct element* queue_get(queue *q) {
     struct element* element = NULL;
     if (!queue_empty(q)){
-        *element = q->_elems[q->_outpos];
+        element = &(q->_elems[q->_outpos]);
         q->_outpos = (q->_outpos + 1) % q->_size;
         q->_numelems--;
         return element;
