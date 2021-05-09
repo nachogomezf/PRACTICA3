@@ -9,9 +9,8 @@ struct element {
 
 typedef struct queue {
 	// Define the struct yourself
-	int size;
-  int current_in;
-  int current_out;
+	int size, head, tail, numelems;
+  struct element* elems;
 }queue;
 
 queue* queue_init (int size);

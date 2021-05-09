@@ -1,6 +1,3 @@
-
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -11,15 +8,19 @@
 
 //To create a queue
 queue* queue_init(int size){
-
     queue * q = (queue *)malloc(sizeof(queue));
-
+    q->size = size;
+    q->elems = (struct element*) malloc(sizeof(struct element) * size);
+    q->head = 0;
+    q->tail = 0;
+    q->numelems = 0;
     return q;
 }
 
 
 // To Enqueue an element
 int queue_put(queue *q, struct element* x) {
+    if (q->numelems != 0){}
     return 0;
 }
 
