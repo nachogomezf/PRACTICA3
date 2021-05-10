@@ -55,7 +55,7 @@ void * _producer(void * arg){
 
 void *_consumer(void *arg){
     struct element* elem;
-    int cost, num_deq = 0;
+    int cost, num_deq = 0; //num_deq will keep track of the number of elements already consumed
     while(num_deq < num_operations){
         pthread_mutex_lock(&circ_buf_mutex); //Lock mutex to read from circular buffer
         while(queue_empty(circ_buf)) //Wait for buffer to be nonempty
