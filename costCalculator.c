@@ -102,11 +102,11 @@ int main (int argc, const char * argv[]) {
     size_buf = atoi(argv[3]);
 
     if (num_prod <= 0){ //Check if valid number of producers
-        fprintf(stderr, "Number of producers must be greater than 0\n");
+        fprintf(stderr, "Error: Number of producers must be greater than 0\n");
         return -1;
     }
     if (size_buf <= 0){ //Check if valid size of buffer
-        fprintf(stderr, "Size of the buffer must be greater than 0\n");
+        fprintf(stderr, "Error: Size of the buffer must be greater than 0\n");
         return -1;
     }
 
