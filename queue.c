@@ -9,8 +9,15 @@ int numelems = 0;
 //To create a queue
 queue* queue_init(int size){
     queue * q = (queue *)malloc(sizeof(queue)); //Reserve memory for the queue
+    if (q == NULL){
+        return NULL;
+    }
     q->_size = size; //Set size
     q->_elems = (struct element*) malloc(sizeof(struct element) * size); //Allocate memory for elements
+    if (q->_elems == NULL){
+        free(q);
+        return NULL;
+    }
     q->_inpos = 0; //The attribute inpos will be the index of the element to be enqueued
     q->_outpos = 0; //outpos will be the index of the element to be dequeued
     q->_numelems = 0; //Free queue

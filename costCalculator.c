@@ -9,7 +9,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-
+#include <errno.h>
 
 #define NUM_CONSUMERS 1
 
@@ -83,6 +83,7 @@ int main (int argc, const char * argv[]) {
     pthread_t *th_prod;
     pthread_t th_cons;
     produc_args *prod_arg;
+    errno = 0;
 
     if (argc != 4){ //Check correct number of inputs
         printf("Error. Structure of the command is: ./calculator <file_name> <num_producers> <buff_size>\n");
@@ -109,50 +110,61 @@ int main (int argc, const char * argv[]) {
         return -1;
     }
 
-    circ_buf = queue_init(size_buf); //Initialize buffer
-
-    //Allocate array of producer threads
-    th_prod = (pthread_t*) malloc(num_prod * sizeof(pthread_t));
-    if (th_prod == NULL){ 
-        perror("Error allocating producer threads.");
-        queue_destroy(circ_buf);
-        return -1;
-    }
+    
 
     close(STDIN_FILENO); //Redirect stdin to use scanf
     if (open(argv[1], O_RDONLY) < 0){
         perror("Error opening the file.");
-        queue_destroy(circ_buf);
-        free(th_prod);
         return -1;
     }
 
-    scanf("%d", &num_operations); //Read number of operations
+    if(scanf("%d", &num_operations) != 1){ //Read number of operations
+        fprintf(stderr, "Error reading: Incorrect file format.\n");
+        close(STDIN_FILENO);
+    }
 
     //Allocate array for elems
     elems = (struct element*) malloc(num_operations * sizeof(struct element));
     if (elems == NULL){ 
         perror("Error allocating elems.");
         close(STDIN_FILENO);
-        queue_destroy(circ_buf);
-        free(th_prod);
         return -1;
     }
 
     //Retrieve elements
     int i = 0;
+    int retVal;
     while(i < num_operations){
-        if (scanf("%*d %d %d", &elems[i].type, &elems[i].time) == EOF ){
+        retVal = scanf("%*d %d %d", &elems[i].type, &elems[i].time); //Returns number of read elements or -1 if EOF
+        if (retVal <= 0){ //Either EOF or not read
+            break;
+        }
+        if (elems[i].type != 1 && elems[i].type != 2 && elems[i].type != 3){ //If read is different from a type, error
+            retVal = 0;
             break;
         }
         i++;
     }
-
+    if (close(STDIN_FILENO) < 0){
+        perror("Error closing file");
+        free(elems);
+        return -1;
+    }
+    if (retVal == 0){ //Haven't read anything
+        fprintf(stderr, "Error reading: Incorrect file format.\n");
+        free(elems);
+        return -1;
+    }
     if (i < num_operations){ //Check if valid number of read lines
-        fprintf(stderr, "NOT ENOUGH LINES READ\n");
-        close(STDIN_FILENO);
-        free(th_prod);
-        queue_destroy(circ_buf);
+        fprintf(stderr, "Error reading: Not enough lines read.\n");
+        free(elems);
+        return -1;
+    }
+
+    //Allocate array of producer threads
+    th_prod = (pthread_t*) malloc(num_prod * sizeof(pthread_t));
+    if (th_prod == NULL){ 
+        perror("Error allocating producer threads.");
         free(elems);
         return -1;
     }
@@ -161,19 +173,46 @@ int main (int argc, const char * argv[]) {
     prod_arg = (produc_args*)malloc(num_prod * sizeof(produc_args));
     if (prod_arg == NULL){ 
         perror("Error allocating elems");
-        close(STDIN_FILENO);
-        queue_destroy(circ_buf);
         free(th_prod);
         free(elems);
         return -1;
     }
     num_op_prod = num_operations / num_prod;
 
+    circ_buf = queue_init(size_buf); //Initialize buffer
+
+    if (circ_buf == NULL){ //Check if queue has been initialized correctly
+        perror("Error allocating memory for queue");
+        free(th_prod);
+        free(elems);
+        return -1;
+    }
 
     //Initialize mutex and condition variable
-    pthread_mutex_init(&circ_buf_mutex, NULL);
-    pthread_cond_init(&circ_buf_not_full, NULL);
-    pthread_cond_init(&circ_buf_not_empty, NULL);
+    if (pthread_mutex_init(&circ_buf_mutex, NULL) < 0){
+        perror("Error initializing mutex");
+        free(th_prod);
+        free(elems);
+        queue_destroy(circ_buf);
+        return -1;
+    }
+    if (pthread_cond_init(&circ_buf_not_full, NULL) < 0){
+        perror("Error initializing condition variable");
+        free(th_prod);
+        free(elems);
+        queue_destroy(circ_buf);
+        pthread_mutex_destroy(&circ_buf_mutex);
+        return -1;
+    }
+    if (pthread_cond_init(&circ_buf_not_empty, NULL) < 0){
+        perror("Error initializing condition variable");
+        free(th_prod);
+        free(elems);
+        queue_destroy(circ_buf);
+        pthread_mutex_destroy(&circ_buf_mutex);
+        pthread_cond_destroy(&circ_buf_not_full);
+        return -1;
+    }
 
     //Create threads
     for (int i = 0; i < num_prod; i++){
@@ -203,6 +242,5 @@ int main (int argc, const char * argv[]) {
     pthread_cond_destroy(&circ_buf_not_full);
     pthread_cond_destroy(&circ_buf_not_empty);
     pthread_mutex_destroy(&circ_buf_mutex);
-    close(STDIN_FILENO);
     return 0;
 }
