@@ -132,11 +132,11 @@ int main (int argc, const char * argv[]) {
     }
 
     //Retrieve elements
-    int i = 0;
-    int retVal = 2;
-    while(i < num_operations && retVal == 2){
-        retVal = scanf("%*d %d %d", &elems[i].type, &elems[i].time); //Returns number of read elements or -1 if EOF
-        if (retVal == 2 && elems[i].type != 1 && elems[i].type != 2 && elems[i].type != 3){ //If read is different from a type, error
+    int j, i = 0;
+    int retVal = 3;
+    while(i < num_operations && retVal == 3){
+        retVal = scanf("%d %d %d", &j, &elems[i].type, &elems[i].time); //Returns number of read elements or -1 if EOF
+        if ((retVal == 3 && elems[i].type != 1 && elems[i].type != 2 && elems[i].type != 3) || j - 1 != i){ //If read is different from a type or the index are different, error
             retVal = 1;
         }
         i++;
