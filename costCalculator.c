@@ -201,6 +201,7 @@ int main (int argc, const char * argv[]) {
     if (circ_buf == NULL){ //Check if queue has been initialized correctly
         perror("Error allocating memory for queue");
         free(th_prod);
+        free(prod_arg);
         free(elems);
         return -1;
     }
