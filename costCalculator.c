@@ -133,15 +133,11 @@ int main (int argc, const char * argv[]) {
 
     //Retrieve elements
     int i = 0;
-    int retVal;
-    while(i < num_operations){
+    int retVal = 2;
+    while(i < num_operations && retVal == 2){
         retVal = scanf("%*d %d %d", &elems[i].type, &elems[i].time); //Returns number of read elements or -1 if EOF
-        if (retVal <= 0){ //Either EOF or not read
-            break;
-        }
-        if (elems[i].type != 1 && elems[i].type != 2 && elems[i].type != 3){ //If read is different from a type, error
-            retVal = 0;
-            break;
+        if (retVal != -1 && elems[i].type != 1 && elems[i].type != 2 && elems[i].type != 3){ //If read is different from a type, error
+            retVal = 1;
         }
         i++;
     }
@@ -152,6 +148,11 @@ int main (int argc, const char * argv[]) {
     }
     if (retVal == 0){ //Haven't read anything
         fprintf(stderr, "Error reading: Incorrect file format.\n");
+        free(elems);
+        return -1;
+    }
+    if (retVal == 1){
+        fprintf(stderr, "Error: incorrect type of machine number.\n");
         free(elems);
         return -1;
     }
