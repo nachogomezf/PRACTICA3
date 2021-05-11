@@ -136,8 +136,14 @@ int main (int argc, const char * argv[]) {
     int retVal = 3;
     while(i < num_operations && retVal == 3){
         retVal = scanf("%d %d %d", &j, &elems[i].type, &elems[i].time); //Returns number of read elements or -1 if EOF
-        if ((retVal == 3 && elems[i].type != 1 && elems[i].type != 2 && elems[i].type != 3) || j - 1 != i){ //If read is different from a type or the index are different, error
-            retVal = 1;
+        if (retVal == 3 && elems[i].type != 1 && elems[i].type != 2 && elems[i].type != 3){ //If read is different from a type, error
+            retVal = -1;
+        }
+        if (retVal == 3 && j - 1 != i){ //If the line number is different from the one it should be, error
+            retVal = -2;
+        }
+        if (retVal == 3 && elems[i].time < 0){ //If the time is less than zero, error
+            retVal = -3;
         }
         i++;
     }
@@ -151,8 +157,18 @@ int main (int argc, const char * argv[]) {
         free(elems);
         return -1;
     }
-    if (retVal == 1){
+    if (retVal == -1){
         fprintf(stderr, "Error: incorrect type of machine number.\n");
+        free(elems);
+        return -1;
+    }
+    if (retVal == -2){
+        fprintf(stderr, "Error: incorrect line number.\n");
+        free(elems);
+        return -1;
+    }
+    if (retVal == -3){
+        fprintf(stderr, "Error: incorrect time for machine %d.\n", j);
         free(elems);
         return -1;
     }
