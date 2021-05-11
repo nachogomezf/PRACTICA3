@@ -211,6 +211,7 @@ int main (int argc, const char * argv[]) {
         perror("Error initializing mutex");
         free(th_prod);
         free(elems);
+        free(prod_arg);
         queue_destroy(circ_buf);
         return -1;
     }
@@ -218,6 +219,7 @@ int main (int argc, const char * argv[]) {
         perror("Error initializing condition variable");
         free(th_prod);
         free(elems);
+        free(prod_arg);
         queue_destroy(circ_buf);
         pthread_mutex_destroy(&circ_buf_mutex);
         return -1;
@@ -226,6 +228,7 @@ int main (int argc, const char * argv[]) {
         perror("Error initializing condition variable");
         free(th_prod);
         free(elems);
+        free(prod_arg);
         queue_destroy(circ_buf);
         pthread_mutex_destroy(&circ_buf_mutex);
         pthread_cond_destroy(&circ_buf_not_full);
