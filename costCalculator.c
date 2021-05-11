@@ -136,7 +136,7 @@ int main (int argc, const char * argv[]) {
     int retVal = 2;
     while(i < num_operations && retVal == 2){
         retVal = scanf("%*d %d %d", &elems[i].type, &elems[i].time); //Returns number of read elements or -1 if EOF
-        if (retVal != -1 && elems[i].type != 1 && elems[i].type != 2 && elems[i].type != 3){ //If read is different from a type, error
+        if (retVal == 2 && elems[i].type != 1 && elems[i].type != 2 && elems[i].type != 3){ //If read is different from a type, error
             retVal = 1;
         }
         i++;
